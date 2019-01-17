@@ -15,8 +15,8 @@ source("R/retrieveData.R")
 retrieveData("https://github.com/GeoScripting-WUR/AdvancedRasterAnalysis/raw/gh-pages/data/GewataBands.zip", "data")
 
 # load data to global environment
-filelist <- list.files(path = "data/", pattern = glob2rx('*.rda'), full.names = TRUE)
-for (file in filelist) {
+fileList <- list.files(path = "data/", pattern = glob2rx('*.rda'), full.names = TRUE)
+for (file in fileList){
   load(file)
 }
 
@@ -29,16 +29,15 @@ eth <- getData('GADM', country='ETH', level=3)
 gwt <- eth[eth$NAME_3=="Getawa",]
 gwt <- spTransform(gwt, CRSobj = crs(vcfGewata))
 
-#apply the mask to all data
-alldata <- mask(x = alldata, mask=gwt)
-plotRGB(alldata, 3, 2, 1, stretch="lin", main = "RGB image of the Gewata region")
+# apply the mask to all data
+gewata <- mask(x = gewata, mask=gwt)
+plotRGB(gewata, 3, 2, 1, stretch="lin", main = "RGB image of the Gewata region")
 
-## Extract all data to a data.frame
-df <- as.data.frame(getValues(alldata))
+# extract all data to a data.frame
+df <- as.data.frame(getValues(gewata))
 
-## select random sample points (choose a size what you think is proper)
-## and use as training data
-sRandomGWT <- sampleRandom(alldata, na.rm=TRUE, sp=TRUE, size = 1000)
+# select random sample points and use as training data
+sRandomGWT <- sampleRandom(gewata, na.rm=TRUE, sp=TRUE, size = 1000)
 sRandomData <- data.frame(VCF = sRandomGWT@data[[7]], 
                           band1 = sRandomGWT@data[[1]],
                           band2 = sRandomGWT@data[[2]],
@@ -50,3 +49,20 @@ sRandomData <- data.frame(VCF = sRandomGWT@data[[7]],
                           longitude = sRandomGWT@coords[,'x'])
 plot(gwt, main="The randomly selected sampling points")
 plot(sRandomGWT, add = TRUE, col = "red")
+
+# plot relationship Landsat bands - VCF cover
+opar <- par(mfrow=c(2, 3))
+plot(VCF ~ band1, data = sRandomData, pch = ".")
+plot(VCF ~ band2, data = sRandomData, pch = ".")
+plot(VCF ~ band3, data = sRandomData, pch = ".")
+mtext(side = 3, line = 2, "Relationship between respective landsat bands and VCF cover", adj = 1, cex = 1.1)
+plot(VCF ~ band4, data = sRandomData, pch = ".")
+plot(VCF ~ band5, data = sRandomData, pch = ".")
+plot(VCF ~ band7, data = sRandomData, pch = ".")
+par(opar)
+
+# Show correlation and select bands
+cor(sRandomData)
+
+
+
