@@ -104,5 +104,5 @@ LUclassesError <- as.data.frame(zonal(squaredError, LUclasses, fun = 'mean', na.
 LUclassesError$mean <- sqrt(LUclassesError$mean)
 LUclassesError$classes <- c("cropland", "forest", "wetland")
 names(LUclassesError) <- c("zone", "RMSE", "classes")
-
+LUclassesError
 
