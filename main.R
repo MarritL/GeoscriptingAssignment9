@@ -6,7 +6,9 @@
 
 # load libraries
 if (!require("raster")) install.packages("raster")
+if (!require("hydroGOF")) install.packages("hydroGOF")
 library(raster)
+library(hydroGOF)
 
 # source functions
 source("R/retrieveData.R")
@@ -21,6 +23,7 @@ for (file in fileList){
 }
 
 # Build a brick containing all data
+vcfGewata[vcfGewata > 100] <- NA 
 gewata <- brick(GewataB1, GewataB2, GewataB3, GewataB4, GewataB5, GewataB7, vcfGewata)
 names(gewata) <- c("band1", "band2", "band3", "band4", "band5", "band7", "VCF")
 
@@ -59,10 +62,28 @@ mtext(side = 3, line = 2, "Relationship between respective landsat bands and VCF
 plot(VCF ~ band4, data = sRandomData, pch = ".")
 plot(VCF ~ band5, data = sRandomData, pch = ".")
 plot(VCF ~ band7, data = sRandomData, pch = ".")
-par(opar)
 
-# Show correlation and select bands
-cor(sRandomData)
+# check correlation and select bands
+correlation <- cor(sRandomData)
+useBands <- names(correlation[1,(correlation[1,] > 0.6 & correlation[1,] < 1) | correlation[1,] < -0.6])
 
+# create model
+model <- lm(VCF ~ band2 + band3 + band5 + band7, data = sRandomData)
 
+# predict tree cover using the linear regression model
+predTC <- predict(gewata, model=model2, na.rm=TRUE)
+predTC[predTC < 0] <- NA
+opar <- par(mfrow=c(1, 2))
+plot(gewata$VCF, main = 'Tree cover (%) based on Landsat VCF')
+plot(predTC, main = 'Predicted treecover (%) based on linear model')
 
+# create dataframe of predicted values
+dfPred <- as.data.frame((getValues(predTC)))
+colnames(dfPred) <- "predicted_TC"
+head(dfPred, n = 10)
+dfVCF <- as.data.frame((df$VCF))
+colnames(dfVCF) <- "TC_VCF"
+head(dfVCF, n = 10)
+
+# compute RMSE
+RMSE <- rmse(dfPred, dfVCF, na.rm=TRUE)
