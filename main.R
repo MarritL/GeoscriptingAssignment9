@@ -23,7 +23,7 @@ for (file in fileList){
 }
 
 # Build a brick containing all data
-vcfGewata[vcfGewata > 100] <- NA 
+vcfGewata[vcfGewata > 100] <- NA # Remove water, cloud or cloud shadow pixels
 gewata <- brick(GewataB1, GewataB2, GewataB3, GewataB4, GewataB5, GewataB7, vcfGewata)
 names(gewata) <- c("band1", "band2", "band3", "band4", "band5", "band7", "VCF")
 
@@ -71,19 +71,28 @@ useBands <- names(correlation[1,(correlation[1,] > 0.6 & correlation[1,] < 1) | 
 model <- lm(VCF ~ band2 + band3 + band5 + band7, data = sRandomData)
 
 # predict tree cover using the linear regression model
+predTC <- predict(gewata, model = model, na.rm=TRUE)
+predTC[predTC < 0] <- NA # remove values smaller than 0
+opar <- par(mfrow=c(1, 2))
+plot(predTC)
+plot(gewata$VCF)
+par(mfrow = 1,1)
+
+# predict tree cover using the linear regression model
 predTC <- predict(gewata, model=model2, na.rm=TRUE)
 predTC[predTC < 0] <- NA
 opar <- par(mfrow=c(1, 2))
 plot(gewata$VCF, main = 'Tree cover (%) based on Landsat VCF')
 plot(predTC, main = 'Predicted treecover (%) based on linear model')
 
-# create dataframe of predicted values
-dfPred <- as.data.frame((getValues(predTC)))
-colnames(dfPred) <- "predicted_TC"
-head(dfPred, n = 10)
-dfVCF <- as.data.frame((df$VCF))
-colnames(dfVCF) <- "TC_VCF"
-head(dfVCF, n = 10)
+# difference raster
+opar <- par(mfrow=c(1,1))
+diff <- plot(gewata$VCF - predTC, main = "Difference (%) in estimated tree cover between VCF and linear model")
 
-# compute RMSE
+# calculate RMSE
+dfpredTC <- as.data.frame(getValues(predTC))
+colnames(dfpredTC) <- "predicted_TC"
+dfVCF <- as.data.frame(getValues(gewata$VCF))
+colnames(dfVCF) <- "TC_VCF"
 RMSE <- rmse(dfPred, dfVCF, na.rm=TRUE)
+
