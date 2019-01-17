@@ -1,5 +1,5 @@
 # Authors: Anne-Juul Welsink and Marrit Leenstra
-# 18th January 2019
+# 17th January 2019
 # Exercise 9, Geoscripting, Wageningen University 
 
 # This project analyses how well landsat band reflectance can predict VCF tree cover.
@@ -66,20 +66,14 @@ plot(VCF ~ band7, data = sRandomData, pch = ".")
 # check correlation and select bands
 correlation <- cor(sRandomData)
 useBands <- names(correlation[1,(correlation[1,] > 0.6 & correlation[1,] < 1) | correlation[1,] < -0.6])
+print(paste0("The following band is highly correlated with VCF and is thus used for the regression: ", useBands, "."))
+# check the print statement for the bands we use in the regression!!
 
 # create model
-model <- lm(VCF ~ band2 + band3 + band5 + band7, data = sRandomData)
+model <- lm(VCF ~ band1 + band2 + band3 + band5 + band7, data = sRandomData)
 
 # predict tree cover using the linear regression model
-predTC <- predict(gewata, model = model, na.rm=TRUE)
-predTC[predTC < 0] <- NA # remove values smaller than 0
-opar <- par(mfrow=c(1, 2))
-plot(predTC)
-plot(gewata$VCF)
-par(mfrow = 1,1)
-
-# predict tree cover using the linear regression model
-predTC <- predict(gewata, model=model2, na.rm=TRUE)
+predTC <- predict(gewata, model=model, na.rm=TRUE)
 predTC[predTC < 0] <- NA
 opar <- par(mfrow=c(1, 2))
 plot(gewata$VCF, main = 'Tree cover (%) based on Landsat VCF')
@@ -87,12 +81,27 @@ plot(predTC, main = 'Predicted treecover (%) based on linear model')
 
 # difference raster
 opar <- par(mfrow=c(1,1))
-diff <- plot(gewata$VCF - predTC, main = "Difference (%) in estimated tree cover between VCF and linear model")
+diffRaster <- gewata$VCF - predTC
+diff <- plot(diffRaster, main = "Difference (%) in estimated tree cover between VCF and linear model")
 
 # calculate RMSE
 dfpredTC <- as.data.frame(getValues(predTC))
 colnames(dfpredTC) <- "predicted_TC"
 dfVCF <- as.data.frame(getValues(gewata$VCF))
 colnames(dfVCF) <- "TC_VCF"
-RMSE <- rmse(dfPred, dfVCF, na.rm=TRUE)
+RMSE <- rmse(dfpredTC, dfVCF, na.rm=TRUE)
+
+# prepare trainingdata
+trainingPoly@data$Code <- as.numeric(trainingPoly@data$Class)
+LUclasses <- rasterize(trainingPoly, gewata, field='Code')
+names(LUclasses) <- "class"
+
+# calculate the mean VCF and predicted value per zone
+squaredError <- diffRaster^2
+LUclassesError <- as.data.frame(zonal(squaredError, LUclasses, fun = 'mean', na.rm = TRUE))
+
+# calculate RMSE per zone
+LUclassesError$mean <- sqrt(LUclassesError$mean)
+LUclassesError$classes <- c("cropland", "forest", "wetland")
+names(LUclassesError) <- c("zone", "RMSE", "classes")
 
