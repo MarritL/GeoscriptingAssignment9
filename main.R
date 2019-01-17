@@ -1,5 +1,5 @@
 # Authors: Anne-Juul Welsink and Marrit Leenstra
-# 18th January 2019
+# 17th January 2019
 # Exercise 9, Geoscripting, Wageningen University 
 
 # This project analyses how well landsat band reflectance can predict VCF tree cover.
@@ -71,15 +71,7 @@ useBands <- names(correlation[1,(correlation[1,] > 0.6 & correlation[1,] < 1) | 
 model <- lm(VCF ~ band2 + band3 + band5 + band7, data = sRandomData)
 
 # predict tree cover using the linear regression model
-predTC <- predict(gewata, model = model, na.rm=TRUE)
-predTC[predTC < 0] <- NA # remove values smaller than 0
-opar <- par(mfrow=c(1, 2))
-plot(predTC)
-plot(gewata$VCF)
-par(mfrow = 1,1)
-
-# predict tree cover using the linear regression model
-predTC <- predict(gewata, model=model2, na.rm=TRUE)
+predTC <- predict(gewata, model=model, na.rm=TRUE)
 predTC[predTC < 0] <- NA
 opar <- par(mfrow=c(1, 2))
 plot(gewata$VCF, main = 'Tree cover (%) based on Landsat VCF')
@@ -94,5 +86,5 @@ dfpredTC <- as.data.frame(getValues(predTC))
 colnames(dfpredTC) <- "predicted_TC"
 dfVCF <- as.data.frame(getValues(gewata$VCF))
 colnames(dfVCF) <- "TC_VCF"
-RMSE <- rmse(dfPred, dfVCF, na.rm=TRUE)
+RMSE <- rmse(dfpredTC, dfVCF, na.rm=TRUE)
 
