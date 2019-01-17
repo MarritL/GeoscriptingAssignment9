@@ -21,6 +21,7 @@ for (file in fileList){
 }
 
 # Build a brick containing all data
+vcfGewata[vcfGewata > 100] <- NA # Remove water, cloud or cloud shadow pixels
 gewata <- brick(GewataB1, GewataB2, GewataB3, GewataB4, GewataB5, GewataB7, vcfGewata)
 names(gewata) <- c("band1", "band2", "band3", "band4", "band5", "band7", "VCF")
 
@@ -59,10 +60,29 @@ mtext(side = 3, line = 2, "Relationship between respective landsat bands and VCF
 plot(VCF ~ band4, data = sRandomData, pch = ".")
 plot(VCF ~ band5, data = sRandomData, pch = ".")
 plot(VCF ~ band7, data = sRandomData, pch = ".")
-par(opar)
 
-# Show correlation and select bands
-cor(sRandomData)
+# check correlation and select bands
+correlation <- cor(sRandomData)
+useBands <- names(correlation[1,(correlation[1,] > 0.6 & correlation[1,] < 1) | correlation[1,] < -0.6])
 
+# create model
+############################################## To do
+model <-  lm(VCF ~ band2 + band3 + band5 + band7, data = sRandomData)
+
+# predict tree cover using the linear regression model
+predTC <- predict(gewata, model = model, na.rm=TRUE)
+predTC[predTC < 0] <- NA # remove values smaller than 0
+opar <- par(mfrow=c(1, 2))
+plot(predTC)
+plot(gewata$VCF)
+par(mfrow = 1,1)
+
+# difference raster
+diff <- plot(gewata$VCF - predTC, main = "Difference (%) in estimated tree cover between VCF and linear model")
+
+# calculate RMSE
+dfpredTC <- as.data.frame(getValues(predTC))
+dfVCF <- as.data.frame(getValues(gewata$VCF))
+sqrt( mean( (dfpredTC-dfVCF)^2 , na.rm = TRUE ) )
 
 
